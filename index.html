@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juego de Batalla de Dos Jugadores</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #333;
+            font-family: Arial, sans-serif;
+        }
+        #gameCanvas {
+            border: 2px solid #333;
+            background-color: #e0e0e0;
+            border-radius: 15px;
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="gameCanvas" width="800" height="400"></canvas>
+
+<script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    const player1 = { x: 100, y: 200, width: 50, height: 50, color: "red", speed: 5, health: 5, bullets: [] };
+    const player2 = { x: 650, y: 200, width: 50, height: 50, color: "blue", speed: 5, health: 5, bullets: [] };
+
+    const bulletSpeed = 7;
+    const bulletSize = 10;
+
+    const keys = {};
+    let winner = null;
+
+    function drawPlayers() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.fillStyle = player1.color;
+        ctx.fillRect(player1.x, player1.y, player1.width, player1.height);
+        
+        ctx.fillStyle = player2.color;
+        ctx.fillRect(player2.x, player2.y, player2.width, player2.height);
+
+        ctx.fillStyle = "black";
+        ctx.font = "20px Arial";
+        ctx.fillText(`Player 1 Health: ${player1.health}`, 10, 20);
+        ctx.fillText(`Player 2 Health: ${player2.health}`, canvas.width - 200, 20);
+
+        ctx.fillStyle = "orange";
+        player1.bullets.forEach(bullet => {
+            ctx.beginPath();
+            ctx.arc(bullet.x, bullet.y, bulletSize, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        ctx.fillStyle = "purple";
+        player2.bullets.forEach(bullet => {
+            ctx.beginPath();
+            ctx.arc(bullet.x, bullet.y, bulletSize, 0, Math.PI * 2);
+            ctx.fill();
+        });
+    }
+
+    function updateGame() {
+        if (winner) {
+            showWinnerPopup(winner);
+            return;
+        }
+
+        if (keys["w"] && player1.y > 0) player1.y -= player1.speed;
+        if (keys["s"] && player1.y + player1.height < canvas.height) player1.y += player1.speed;
+        if (keys["a"] && player1.x > 0) player1.x -= player1.speed;
+        if (keys["d"] && player1.x + player1.width < canvas.width) player1.x += player1.speed;
+
+        if (keys["ArrowUp"] && player2.y > 0) player2.y -= player2.speed;
+        if (keys["ArrowDown"] && player2.y + player2.height < canvas.height) player2.y += player2.speed;
+        if (keys["ArrowLeft"] && player2.x > 0) player2.x -= player2.speed;
+        if (keys["ArrowRight"] && player2.x + player2.width < canvas.width) player2.x += player2.speed;
+
+        if (keys["g"]) shootBullet(player1, 1);
+        if (keys["k"]) shootBullet(player2, -1);
+
+        updateBullets(player1, player2);
+        updateBullets(player2, player1);
+
+        drawPlayers();
+
+        if (player1.health <= 0 || player2.health <= 0) {
+            winner = player1.health <= 0 ? "Player 2" : "Player 1";
+        }
+
+        requestAnimationFrame(updateGame);
+    }
+
+    function shootBullet(player, direction) {
+        const bullet = { x: player.x + player.width / 2, y: player.y + player.height / 2, speed: bulletSpeed * direction };
+        player.bullets.push(bullet);
+        if (player === player1) keys["g"] = false;
+        if (player === player2) keys["k"] = false;
+    }
+
+    function updateBullets(shooter, target) {
+        shooter.bullets.forEach((bullet, index) => {
+            bullet.x += bullet.speed;
+
+            if (bullet.x < target.x + target.width &&
+                bullet.x + bulletSize > target.x &&
+                bullet.y < target.y + target.height &&
+                bullet.y + bulletSize > target.y) {
+                target.health -= 1;
+                shooter.bullets.splice(index, 1);
+            }
+
+            if (bullet.x < 0 || bullet.x > canvas.width) {
+                shooter.bullets.splice(index, 1);
+            }
+        });
+    }
+
+    function showWinnerPopup(winner) {
+        ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.fillStyle = "white";
+        ctx.font = "30px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(`${winner} ha ganado el juego!`, canvas.width / 2, canvas.height / 2);
+        
+        ctx.font = "20px Arial";
+        ctx.fillText("Presiona 'Enter' para reiniciar", canvas.width / 2, canvas.height / 2 + 40);
+    }
+
+    function resetGame() {
+        player1.health = 5;
+        player2.health = 5;
+        player1.x = 100;
+        player1.y = 200;
+        player2.x = 650;
+        player2.y = 200;
+        player1.bullets = [];
+        player2.bullets = [];
+        winner = null;
+        updateGame();
+    }
+
+    window.addEventListener("keydown", (e) => {
+        keys[e.key] = true;
+        
+        // Reiniciar el juego al presionar "Enter" si hay un ganador
+        if (e.key === "Enter" && winner) {
+            resetGame();
+        }
+    });
+
+    window.addEventListener("keyup", (e) => {
+        keys[e.key] = false;
+    });
+
+    drawPlayers();
+    updateGame();
+</script>
+
+</body>
+</html>
